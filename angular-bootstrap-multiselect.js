@@ -41,6 +41,8 @@ angular.module("ui.multiselect", ["multiselect.tpl.html"])
 				scope.filterAfterRows = attrs.filterAfterRows;
 				var changeHandler = attrs.change || angular.noop;
 
+				var objSelect = attrs.objSelect || true;	// Added 2016.02.17
+
 				scope.items = [];
 				scope.header = "Select";
 				scope.multiple = isMultiple;
@@ -148,6 +150,21 @@ angular.module("ui.multiselect", ["multiselect.tpl.html"])
 						local[parsedResult.itemName] = modelCtrl.$modelValue;
 						scope.header = parsedResult.viewMapper(local);
 					}
+
+					// Added 2016.02.15
+					var newVal = modelCtrl.$modelValue;
+					if(!scope.header) {
+						angular.forEach(scope.items, function(item) {
+							if(compareByKey !== undefined && newVal !== null) {
+								if((!newVal[compareByKey] && angular.equals(item.model[compareByKey], newVal))
+										|| (angular.equals(item.model[compareByKey], newVal[compareByKey]))) {
+									var local = {};
+									local[parsedResult.itemName] = item.model;
+									scope.header = parsedResult.viewMapper(local);
+								}
+							}
+						});
+					}
 				}
 
 				function isEmpty(obj) {
@@ -156,6 +173,9 @@ angular.module("ui.multiselect", ["multiselect.tpl.html"])
 					}
 					if(!obj) {
 						return true;
+					}
+					if(!obj.length) {	// Added 2016.02.15
+						return false;
 					}
 					if(obj.length && obj.length > 0) {
 						return false;
@@ -211,7 +231,13 @@ angular.module("ui.multiselect", ["multiselect.tpl.html"])
 							}
 						});
 					}
-					modelCtrl.$setViewValue(value);
+
+					// Added 2016.02.17
+					if(eval(objSelect)) {
+						modelCtrl.$setViewValue(value);
+					} else if(!eval(objSelect) && compareByKey !== undefined) {
+						modelCtrl.$setViewValue(value[compareByKey]);
+					}
 				}
 
 				function markChecked(newVal) {
@@ -220,8 +246,12 @@ angular.module("ui.multiselect", ["multiselect.tpl.html"])
 							item.checked = false;
 							if(compareByKey === undefined && angular.equals(item.model, newVal)) {
 								item.checked = true;
-							} else if(compareByKey !== undefined && newVal !== null && angular.equals(item.model[compareByKey], newVal[compareByKey])) {
-								item.checked = true;
+							} else if(compareByKey !== undefined && newVal !== null) {	// Added 2016.02.15
+								if(!newVal[compareByKey] && angular.equals(item.model[compareByKey], newVal)) {
+									item.checked = true;
+								} else if(angular.equals(item.model[compareByKey], newVal[compareByKey])) {
+									item.checked = true;
+								}
 							}
 						});
 					} else {
@@ -230,8 +260,12 @@ angular.module("ui.multiselect", ["multiselect.tpl.html"])
 							angular.forEach(newVal, function(i) {
 								if(compareByKey === undefined && angular.equals(item.model, i)) {
 									item.checked = true;
-								} else if(compareByKey !== undefined && angular.equals(item.model[compareByKey], i[compareByKey])) {
-									item.checked = true;
+								} else if(compareByKey !== undefined) {	// Added 2016.02.15
+									if(!i[compareByKey] && angular.equals(item.model[compareByKey], i)) {
+										item.checked = true;
+									} else if(angular.equals(item.model[compareByKey], i[compareByKey])) {
+										item.checked = true;
+									}
 								}
 							});
 						});
